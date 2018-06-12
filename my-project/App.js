@@ -50,6 +50,13 @@ export default class App extends React.Component {
       sleepingActive: false,
       playingActive: false,
       washingActive: false,
+      active: '',
+      //daysAlive (real mode)
+      //birthDay
+      //secondsAlive (dev mode)
+      //birthTime
+      //kinda bad
+
       }
   }
 
@@ -65,10 +72,84 @@ export default class App extends React.Component {
     })
   }
 
-  activatePet = () => {
-    this.setState ({
-      petBarActive: !this.state.petBarActive
-    })
+  levelPet() {
+    var levelTo = this.state.daysCaredFor + 1;
+    AsyncStorage.setItem("daysCaredFor", JSON.stringify(levelTo));
+    this.setState({"daysCaredFor": levelTo});
+    console.log(levelTo);
+    console.log(this.state.daysCaredFor);
+  }
+
+  pressPet() {
+    { this.state.petBarActive ? this.careForPet():this.setState({ petBarActive: true, }); }
+  }
+
+  careForPet() {
+    { this.state.active == 'feed' ? this.feedPet():
+      this.state.active == 'sleep' ? this.restPet():
+      this.state.active == 'play' ? this.entertainPet():
+      this.state.active == 'wash' ? this.washPet():null
+    }
+  }
+
+  feedPet() {
+    {this.state.fed ? null:this.feedPetHelper()}
+
+    {(!this.state.fed && this.state.rested && this.state.entertained && this.state.washed) ? 
+        this.levelPet():null}
+  }
+
+  feedPetHelper() {
+    AsyncStorage.setItem("fed", JSON.stringify(true));
+    this.setState({"fed": true});
+
+    AsyncStorage.setItem("lastFed", JSON.stringify(this.state.todaysDate));
+    this.setState({"lastFed": this.state.todaysDate});
+  }
+
+  restPet() {
+    {this.state.rested ? null:this.restPetHelper()}
+
+    {(this.state.fed && !this.state.rested && this.state.entertained && this.state.washed) ? 
+        this.levelPet():null}
+  }
+
+  restPetHelper() {
+    AsyncStorage.setItem("rested", JSON.stringify(true));
+    this.setState({"rested": true});
+
+    AsyncStorage.setItem("lastRested", JSON.stringify(this.state.todaysDate));
+    this.setState({"lastRested": this.state.todaysDate});
+  }
+
+  entertainPet() {
+    {this.state.entertained ? null:this.entertainPetHelper()}
+
+    {(this.state.fed && this.state.rested && !this.state.entertained && this.state.washed) ? 
+        this.levelPet():null}
+  }
+
+  entertainPetHelper() {
+    AsyncStorage.setItem("entertained", JSON.stringify(true));
+    this.setState({"entertained": true});
+
+    AsyncStorage.setItem("lastEntertained", JSON.stringify(this.state.todaysDate));
+    this.setState({"lastEntertained": this.state.todaysDate});
+  }
+
+  washPet() {
+    {this.state.washed ? null:this.washPetHelper()}
+
+    {(this.state.fed && this.state.rested && this.state.entertained && !this.state.washed) ? 
+      this.levelPet():null}
+  }
+
+  washPetHelper() {
+    AsyncStorage.setItem("washed", JSON.stringify(true));
+    this.setState({"washed": true});
+
+    AsyncStorage.setItem("lastWashed", JSON.stringify(this.state.todaysDate));
+    this.setState({"lastWashed": this.state.todaysDate});
   }
 
   menuPress = () => {
@@ -114,7 +195,12 @@ export default class App extends React.Component {
       this.setState({"lastWashed": JSON.parse(value)});
     }).done();
 
-    setTimeout( () => { setInterval( () => {this.setTodaysDate();}, 1000); }, 0 );
+    AsyncStorage.getItem("daysCaredFor").then((value) => {
+      this.setState({"daysCaredFor": JSON.parse(value)});
+    }).done();
+
+    setTimeout( () => {this.setTodaysDate()}, 1 );
+    setInterval( () => {this.setTodaysDate();}, 1000);
 
 
   }
@@ -140,10 +226,10 @@ export default class App extends React.Component {
 
     this.setState({ todaysDate: date });
 
-      {(this.state.lastFed < this.state.todaysDate) ? this.setState({ fed: false }):null};
-      {(this.state.lastRested < this.state.todaysDate) ? this.setState({ rested: false }):null}; 
-      {(this.state.lastEntertained < this.state.todaysDate) ? this.setState({ entertained: false }):null}; 
-      {(this.state.lastWashed < this.state.todaysDate) ? this.setState({ washed: false }):null};  
+      {(this.state.todaysDate - this.state.lastFed) > 5 ? this.setState({ fed: false }):null};
+      {(this.state.todaysDate - this.state.lastRested) > 5 ? this.setState({ rested: false }):null}; 
+      {(this.state.todaysDate - this.state.lastEntertained) > 5 ? this.setState({ entertained: false }):null}; 
+      {(this.state.todaysDate - this.state.lastWashed) > 5 ? this.setState({ washed: false }):null};  
       AsyncStorage.setItem("fed", JSON.stringify(this.state.fed));
       AsyncStorage.setItem("rested", JSON.stringify(this.state.rested));
       AsyncStorage.setItem("entertained", JSON.stringify(this.state.entertained));
@@ -163,58 +249,43 @@ export default class App extends React.Component {
   }
 
   feed() {
-    AsyncStorage.setItem("fed", JSON.stringify(true));
-    this.setState({"fed": true});
+    { this.state.active == 'feed' ? 
+      this.setState({ active: '' }):this.setState({ active: 'feed' }) 
+    };
 
-    AsyncStorage.setItem("lastFed", JSON.stringify(this.state.todaysDate));
-    this.setState({"lastFed": this.state.todaysDate});
-
-    this.setState({"feedingActive": !this.state.feedingActive});
-    this.setState({"sleepingActive": false});
-    this.setState({"playingActive": false});
-    this.setState({"washingActive": false});
 
   }
 
+
   sleep() {
-    AsyncStorage.setItem("rested", JSON.stringify(true));
-    this.setState({"rested": true});
-
-    AsyncStorage.setItem("lastRested", JSON.stringify(this.state.todaysDate));
-    this.setState({"lastRested": this.state.todaysDate});
-
-    this.setState({"feedingActive": false});
-    this.setState({"sleepingActive": !this.state.sleepingActive});
-    this.setState({"playingActive": false});
-    this.setState({"washingActive": false});
+    { this.state.active == 'sleep' ? 
+      this.setState({ active: '' }):this.setState({ active: 'sleep' }) 
+    };
   }
 
   play() {
-    AsyncStorage.setItem("entertained", JSON.stringify(true));
-    this.setState({"entertained": true});
-
-    AsyncStorage.setItem("lastEntertained", JSON.stringify(this.state.todaysDate));
-    this.setState({"lastEntertained": this.state.todaysDate});
-
-    this.setState({"feedingActive": false});
-    this.setState({"sleepingActive": false});
-    this.setState({"playingActive": !this.state.playingActive});
-    this.setState({"washingActive": false});
+    { this.state.active == 'play' ? 
+      this.setState({ active: '' }):this.setState({ active: 'play' }) 
+    };
   }
 
   wash() {
-    AsyncStorage.setItem("washed", JSON.stringify(true));
-    this.setState({"washed": true});
-
-    AsyncStorage.setItem("lastWashed", JSON.stringify(this.state.todaysDate));
-    this.setState({"lastWashed": this.state.todaysDate});
-
-    this.setState({"feedingActive": false});
-    this.setState({"sleepingActive": false});
-    this.setState({"playingActive": false});
-    this.setState({"washingActive": !this.state.washingActive});
+    { this.state.active == 'wash' ? 
+      this.setState({ active: '' }):this.setState({ active: 'wash' }) 
+    };
   }
 
+  LevelUpIfAllTrue() {
+    //levels up the pet if all of its needs are met
+    {this.state.fed ? 
+      this.state.rested ? 
+        this.state.entertained ? 
+          this.state.washed ? 
+            this.setState({ daysAlive: this.state.daysAlive + 1 }):null
+          :null
+        :null
+     :null}
+  }
 
 
 
@@ -226,28 +297,28 @@ export default class App extends React.Component {
     var shadowStyle;
     var shadowSquishedStyle;
     {this.state.petBarActive ? 
-    this.state.feedingActive ? backgroundStyle = [styles.container, { backgroundColor: '#CC7E85' }]:
-    this.state.sleepingActive ? backgroundStyle = [styles.container, { backgroundColor: '#00A878' }]:
-    this.state.playingActive ? backgroundStyle = [styles.container, { backgroundColor: '#F4A259' }]:
-    this.state.washingActive ? backgroundStyle = [styles.container, { backgroundColor: '#F4E285' }]:
+    this.state.active == 'feed' ? backgroundStyle = [styles.container, { backgroundColor: '#CC7E85' }]:
+    this.state.active == 'sleep' ? backgroundStyle = [styles.container, { backgroundColor: '#00A878' }]:
+    this.state.active == 'play' ? backgroundStyle = [styles.container, { backgroundColor: '#F4A259' }]:
+    this.state.active == 'wash' ? backgroundStyle = [styles.container, { backgroundColor: '#F4E285' }]:
     backgroundStyle = styles.container:backgroundStyle = styles.container };
 
     {this.state.petBarActive ? 
-    this.state.feedingActive ? shadowStyle = [styles.shadow, { backgroundColor: '#684551' }]:
-    this.state.sleepingActive ? shadowStyle = [styles.shadow, { backgroundColor: '#0B5351' }]:
-    this.state.playingActive ? shadowStyle = [styles.shadow, { backgroundColor: '#AA5042' }]:
-    this.state.washingActive ? shadowStyle = [styles.shadow, { backgroundColor: '#A49966' }]:
+    this.state.active == 'feed' ? shadowStyle = [styles.shadow, { backgroundColor: '#684551' }]:
+    this.state.active == 'sleep' ? shadowStyle = [styles.shadow, { backgroundColor: '#0B5351' }]:
+    this.state.active == 'play' ? shadowStyle = [styles.shadow, { backgroundColor: '#AA5042' }]:
+    this.state.active == 'wash' ? shadowStyle = [styles.shadow, { backgroundColor: '#A49966' }]:
     shadowStyle = styles.shadow:shadowStyle = styles.shadow };
 
     {this.state.petBarActive ? 
-    this.state.feedingActive ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#684551' }]:
-    this.state.sleepingActive ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#0B5351' }]:
-    this.state.playingActive ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4A259' }]:
-    this.state.washingActive ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4E285' }]:
+    this.state.active == 'feed' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#684551' }]:
+    this.state.active == 'sleep' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#0B5351' }]:
+    this.state.active == 'play' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4A259' }]:
+    this.state.active == 'wash' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4E285' }]:
     shadowSquishedStyle = styles.shadowSquished:shadowSquishedStyle = styles.shadowSquished };
 
     return ( 
-      <View style={backgroundStyle}>
+      <TouchableOpacity activeOpacity={1} style={backgroundStyle} onPress={() => {this.setState({ petBarActive: false });}}>
       {this.state.menuOpened && <View style={this.state.menuOpened ? styles.menu:null}>
           <Text style={styles.title} onPress={this.linePress}>
           {(this.state.line % 2 == 0) ? line1:line2}
@@ -276,7 +347,7 @@ export default class App extends React.Component {
       <TouchableOpacity 
         activeOpacity={1} 
         style={this.state.squished ? styles.circleSquished:styles.circle} 
-        onPress={this.activatePet}
+        onPress={() => this.pressPet()}
         onPressIn={this.onSquish}
         onPressOut={this.onSquish}>
                     <View style={styles.eyes}>
@@ -297,7 +368,7 @@ export default class App extends React.Component {
             </TouchableOpacity>
             <TouchableOpacity style={styles.petBarItem} onPress={() => this.sleep()}>
               Sleep
-              <Text>Sleep</Text>
+              <Text>Sleep (take out)</Text>
               {this.state.rested ? <Text>True</Text>:<Text>False</Text>}
               <Text>{this.state.lastRested}</Text>
             </TouchableOpacity>
@@ -309,7 +380,35 @@ export default class App extends React.Component {
             </TouchableOpacity>
             <TouchableOpacity style={styles.petBarItem} onPress={() => this.wash()}>
               Wash
-              <Text>Wash</Text>
+              <Text>Wash (take out)</Text>
+              {this.state.washed ? <Text>True</Text>:<Text>False</Text>}
+              <Text>{this.state.lastWashed}</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        {(this.state.active == 'feed') &&
+          <View style={styles.petBar}>
+            <TouchableOpacity style={[styles.petBarItem]} onPress={() => this.feed()}>
+              Feed
+              <Text>Feed</Text>
+              {this.state.fed ? <Text>True</Text>:<Text>False</Text>}
+              <Text>{this.state.lastFed}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.petBarItem} onPress={() => this.sleep()}>
+              Sleep
+              <Text>Sleep (take out)</Text>
+              {this.state.rested ? <Text>True</Text>:<Text>False</Text>}
+              <Text>{this.state.lastRested}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.petBarItem} onPress={() => this.play()}>
+              Play
+              <Text>Play</Text>
+              {this.state.entertained ? <Text>True</Text>:<Text>False</Text>}
+              <Text>{this.state.lastEntertained}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.petBarItem} onPress={() => this.wash()}>
+              Wash
+              <Text>Wash (take out)</Text>
               {this.state.washed ? <Text>True</Text>:<Text>False</Text>}
               <Text>{this.state.lastWashed}</Text>
             </TouchableOpacity>
@@ -322,9 +421,11 @@ export default class App extends React.Component {
           <Text>Gratitude</Text>
           <Text>Now:</Text>
           <Text>{this.state.todaysDate}</Text>
+          <Text>{this.state.daysCaredFor}</Text>
+          <Text>{this.state.active}</Text>   
         </TouchableOpacity>
         <View style={styles.gratitudeButtonShadow}></View>
-      </View>
+      </TouchableOpacity>
       
     );
   }
