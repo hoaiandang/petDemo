@@ -111,8 +111,6 @@ class Pet {
       rLv = this.restLvPivot + (this.currentTime - this.startedSleepingAt);
 
     }
-    
-    rLv = Math.floor(rLv / 1000);
     //console.log(rLv);
     if (rLv > 100) {
       return 100;
