@@ -111,6 +111,8 @@ class Pet {
       rLv = this.restLvPivot + (this.currentTime - this.startedSleepingAt);
 
     }
+    
+    rLv = Math.floor(rLv / 1000);
     console.log(rLv);
     if (rLv > 100) {
       return 100;
@@ -332,7 +334,8 @@ export default class App extends React.Component {
     {(minutes < 10) ? minutes = 0 + "" + minutes:null }
     {(seconds < 10) ? seconds = 0 + "" + seconds:null }
 
-    var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
+    //var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
+    var date = new Date().valueOf();
 
     this.setState({ todaysDate: date });
     this.state.pettt.updateTime(date);
@@ -365,7 +368,8 @@ export default class App extends React.Component {
     {(minutes < 10) ? minutes = 0 + "" + minutes:null }
     {(seconds < 10) ? seconds = 0 + "" + seconds:null }
 
-    var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
+    //var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
+    var date = new Date().valueOf();
 
     this.setState({ todaysDate: date });
     this.state.pettt.updateTime(date);
