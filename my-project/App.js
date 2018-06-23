@@ -11,6 +11,7 @@ import {
   TextInput,
   AsyncStorage,
   Alert } from 'react-native';
+import Draggable from "./Draggable";
 
 class Circle extends Component {
   render() {
@@ -35,6 +36,108 @@ class Eye extends Component {
 
 }
 
+class Pet {
+	constructor(fullness, lastFed, lvl) {
+		this.works = false;
+		this.fullness = fullness;
+    this.lastFed = lastFed;
+    this.currentTime = 0;
+    this.currentPersonality = 'a';
+    this.quality = 100;
+    this.species = 'abapo';
+    
+    this.lvl = lvl;
+
+    this.wokeUpAt = 0;
+    this.startedSleepingAt = 0;
+    this.sleeping = false;
+    this.restLvPivot = 0;
+	}
+
+	petFeed() {
+		this.fullness += 1;
+    this.lastFed = this.currentTime;
+		console.log(this.fullness);
+	}
+
+	isFull() {
+		return this.fullness >= 3;
+	}
+
+	resetHunger() {
+		this.fullness = 0;
+	}
+
+  decreaseHunger() {
+    if (this.fullness > 0) {
+      this.fullness -= 1;
+      this.lastFed = this.currentTime;
+    }
+  }
+
+  updateTime(time) {
+    this.currentTime = time;
+  }
+
+  canEat() {
+    return this.fullness < 5;
+  }
+
+  sleep() {
+    this.restLvPivot = this.restLv();
+    console.log(this.restLvPivot);
+    this.sleeping = !this.sleeping;
+    if (this.sleeping) {
+      console.log('true');
+      this.startedSleepingAt = this.currentTime;
+    } else {
+      this.wokeUpAt = this.currentTime;
+      console.log('false');
+    }
+  }
+
+  isRested() {
+    return this.restLv() > 5;
+  }
+
+  restLv() {
+    //rn this is wrong because its treating dates strings as integers (eg 6:00 - 5:30 = 30 vs 600 - 530 = 70)
+    var rLv;
+    if (!this.sleeping) {
+      //while awake, restlv = time sleeping - time awake
+      rLv = /*this.restLvPivot + */(this.wokeUpAt - this.startedSleepingAt) - (this.currentTime - this.wokeUpAt);
+    } else {
+      //while sleeping, the amount of energy the pet had when it went to sleep + the time spent sleeping
+      rLv = this.restLvPivot + (this.currentTime - this.startedSleepingAt);
+
+    }
+    console.log(rLv);
+    if (rLv > 100) {
+      return 100;
+    } else if (rLv < 0) {
+      return 0;
+    } else {
+      return rLv;
+    }
+  }
+
+  color() {
+    if (this.lvl < 5) {
+      return '#F1FAEE';
+    } else if (this.lvl < 15) {
+      return '#D3A588';
+    } else {
+      return '#7A6563';
+    }
+    
+  }
+
+  levelUp() {
+    this.lvl += 1;
+  }
+}
+
+
 export default class App extends React.Component {
 
     constructor(props) {
@@ -51,6 +154,7 @@ export default class App extends React.Component {
       playingActive: false,
       washingActive: false,
       active: '',
+      pettt: new Pet(5),
       //daysAlive (real mode)
       //birthDay
       //secondsAlive (dev mode)
@@ -76,6 +180,7 @@ export default class App extends React.Component {
     var levelTo = this.state.daysCaredFor + 1;
     AsyncStorage.setItem("daysCaredFor", JSON.stringify(levelTo));
     this.setState({"daysCaredFor": levelTo});
+    this.state.pettt.levelUp();
     console.log(levelTo);
     console.log(this.state.daysCaredFor);
   }
@@ -93,7 +198,6 @@ export default class App extends React.Component {
   }
 
   feedPet() {
-    {this.state.fed ? null:this.feedPetHelper()}
 
     {(!this.state.fed && this.state.rested && this.state.entertained && this.state.washed) ? 
         this.levelPet():null}
@@ -108,7 +212,7 @@ export default class App extends React.Component {
   }
 
   restPet() {
-    {this.state.rested ? null:this.restPetHelper()}
+    this.state.pettt.sleep();
 
     {(this.state.fed && !this.state.rested && this.state.entertained && this.state.washed) ? 
         this.levelPet():null}
@@ -123,7 +227,7 @@ export default class App extends React.Component {
   }
 
   entertainPet() {
-    {this.state.entertained ? null:this.entertainPetHelper()}
+    {this.state.entertained || this.state.pettt.sleeping ? null:this.entertainPetHelper()}
 
     {(this.state.fed && this.state.rested && !this.state.entertained && this.state.washed) ? 
         this.levelPet():null}
@@ -199,9 +303,48 @@ export default class App extends React.Component {
       this.setState({"daysCaredFor": JSON.parse(value)});
     }).done();
 
-    setTimeout( () => {this.setTodaysDate()}, 1 );
+    AsyncStorage.getItem("fullness").then((value) => {
+      this.setState({"fullness": JSON.parse(value)});
+    }).done();
+
+    //this.setState({pettt: new Pet(this.state.fullness)});
+    //you can't use this.state.fullness here, it will still be undefined
+
+    setTimeout( () => {this.startSetTodaysDate()}, 1 );
     setInterval( () => {this.setTodaysDate();}, 1000);
 
+
+  }
+
+  startSetTodaysDate() {
+  	this.setState({pettt: new Pet(this.state.fullness, this.state.lastFed, this.state.daysCaredFor)});
+  	console.log(this.state.fullness);
+  	var year = new Date().getFullYear();
+    var month = new Date().getMonth() + 1;
+    var day = new Date().getDate();
+    var hours = new Date().getHours();
+    var minutes = new Date().getMinutes();
+    var seconds = new Date().getSeconds();
+
+    {(month < 10) ? month = 0 + "" + month:null }
+    {(day < 10) ? day = 0 + "" + day:null }
+    {(hours < 10) ? hours = 0 + "" + hours:null }
+    {(minutes < 10) ? minutes = 0 + "" + minutes:null }
+    {(seconds < 10) ? seconds = 0 + "" + seconds:null }
+
+    var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
+
+    this.setState({ todaysDate: date });
+    this.state.pettt.updateTime(date);
+
+      {(this.state.todaysDate - this.state.pettt.lastFed) > 5 ? this.setState({ fed: false }):null};
+      
+      {(this.state.todaysDate - this.state.lastEntertained) > 5 ? this.setState({ entertained: false }):null}; 
+      {(this.state.todaysDate - this.state.lastWashed) > 5 ? this.setState({ washed: false }):null};  
+      AsyncStorage.setItem("fed", JSON.stringify(this.state.fed));
+      AsyncStorage.setItem("rested", JSON.stringify(this.state.rested));
+      AsyncStorage.setItem("entertained", JSON.stringify(this.state.entertained));
+      AsyncStorage.setItem("washed", JSON.stringify(this.state.washed));
 
   }
 
@@ -225,15 +368,19 @@ export default class App extends React.Component {
     var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
 
     this.setState({ todaysDate: date });
+    this.state.pettt.updateTime(date);
 
-      {(this.state.todaysDate - this.state.lastFed) > 5 ? this.setState({ fed: false }):null};
-      {(this.state.todaysDate - this.state.lastRested) > 5 ? this.setState({ rested: false }):null}; 
+      {(this.state.todaysDate - this.state.pettt.lastFed) > 5 ? this.state.pettt.decreaseHunger():null};
+      
       {(this.state.todaysDate - this.state.lastEntertained) > 5 ? this.setState({ entertained: false }):null}; 
-      {(this.state.todaysDate - this.state.lastWashed) > 5 ? this.setState({ washed: false }):null};  
+      {(this.state.todaysDate - this.state.lastWashed) > 5 ? this.setState({ washed: false }):null};
+      this.setState({fed: this.state.pettt.isFull()});  
+      this.setState({rested: this.state.pettt.isRested()});  
       AsyncStorage.setItem("fed", JSON.stringify(this.state.fed));
       AsyncStorage.setItem("rested", JSON.stringify(this.state.rested));
       AsyncStorage.setItem("entertained", JSON.stringify(this.state.entertained));
       AsyncStorage.setItem("washed", JSON.stringify(this.state.washed));
+      AsyncStorage.setItem("fullness", JSON.stringify(this.state.pettt.fullness));
     
     
   }
@@ -288,9 +435,12 @@ export default class App extends React.Component {
   }
 
 
-
   render() {
 
+    const lvl = {
+      backgroundColor: this.state.pettt.color(),
+    }
+    var draggable1 = new Draggable();
     var line1 = 'Name wants to learn more about the world.'
     var line2 = "Tell them about 3 things you're grateful for!"
     var backgroundStyle;
@@ -313,8 +463,8 @@ export default class App extends React.Component {
     {this.state.petBarActive ? 
     this.state.active == 'feed' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#684551' }]:
     this.state.active == 'sleep' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#0B5351' }]:
-    this.state.active == 'play' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4A259' }]:
-    this.state.active == 'wash' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#F4E285' }]:
+    this.state.active == 'play' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#AA5042' }]:
+    this.state.active == 'wash' ? shadowSquishedStyle = [styles.shadowSquished, { backgroundColor: '#A49966' }]:
     shadowSquishedStyle = styles.shadowSquished:shadowSquishedStyle = styles.shadowSquished };
 
     return ( 
@@ -346,13 +496,13 @@ export default class App extends React.Component {
 
       <TouchableOpacity 
         activeOpacity={1} 
-        style={this.state.squished ? styles.circleSquished:styles.circle} 
+        style={[this.state.squished ? styles.circleSquished:styles.circle, lvl]} 
         onPress={() => this.pressPet()}
         onPressIn={this.onSquish}
         onPressOut={this.onSquish}>
                     <View style={styles.eyes}>
-                        <View style={this.state.squished ? styles.blinked:styles.eye}></View>
-                        <View style={this.state.squished ? styles.blinked:styles.eye}></View>
+                        <View style={this.state.squished || this.state.pettt.sleeping ? styles.blinked:styles.eye}></View>
+                        <View style={this.state.squished || this.state.pettt.sleeping ? styles.blinked:styles.eye}></View>
                     </View>
                     <View style={[styles.countContainer]}>
                     </View>
@@ -364,13 +514,13 @@ export default class App extends React.Component {
               Feed
               <Text>Feed</Text>
               {this.state.fed ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastFed}</Text>
+              <Text>{this.state.pettt.lastFed}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.petBarItem} onPress={() => this.sleep()}>
               Sleep
-              <Text>Sleep (take out)</Text>
+              <Text>Sleep</Text>
               {this.state.rested ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastRested}</Text>
+              <Text>{this.state.pettt.restLv()}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.petBarItem} onPress={() => this.play()}>
               Play
@@ -386,32 +536,13 @@ export default class App extends React.Component {
             </TouchableOpacity>
           </View>
         }
-        {(this.state.active == 'feed') &&
+        {this.state.petBarActive && (this.state.active == 'feed') &&
           <View style={styles.petBar}>
-            <TouchableOpacity style={[styles.petBarItem]} onPress={() => this.feed()}>
-              Feed
-              <Text>Feed</Text>
-              {this.state.fed ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastFed}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.petBarItem} onPress={() => this.sleep()}>
-              Sleep
-              <Text>Sleep (take out)</Text>
-              {this.state.rested ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastRested}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.petBarItem} onPress={() => this.play()}>
-              Play
-              <Text>Play</Text>
-              {this.state.entertained ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastEntertained}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.petBarItem} onPress={() => this.wash()}>
-              Wash
-              <Text>Wash (take out)</Text>
-              {this.state.washed ? <Text>True</Text>:<Text>False</Text>}
-              <Text>{this.state.lastWashed}</Text>
-            </TouchableOpacity>
+            <Draggable pet={this.state.pettt} style={styles.food}/>
+            <Draggable pet={this.state.pettt} style={styles.food}/>
+            <Draggable pet={this.state.pettt} style={styles.food}/>
+            <Draggable pet={this.state.pettt} style={styles.food}/>
+
           </View>
         }
         <TouchableOpacity 
@@ -423,6 +554,8 @@ export default class App extends React.Component {
           <Text>{this.state.todaysDate}</Text>
           <Text>{this.state.daysCaredFor}</Text>
           <Text>{this.state.active}</Text>   
+          <Text>{this.state.pettt.fullness}</Text>
+          <Text>{JSON.stringify(this.state.pettt.sleeping)}</Text>
         </TouchableOpacity>
         <View style={styles.gratitudeButtonShadow}></View>
       </TouchableOpacity>
@@ -469,16 +602,19 @@ var styles = StyleSheet.create({
     flexDirection: 'row',
     paddingLeft: 5,
     paddingRight: 5,
+    paddingTop: 10,
+    paddingBottom: 10,
 
   }, petBarItem: {
     backgroundColor: '#457B9D',
     height: 60,
     width: 60,
-    marginTop: 10,
-    marginBottom: 10,
     borderRadius: 30,
     marginLeft: 5,
     marginRight: 5,
+
+  }, food: {
+    marginTop: 10,
 
   }, circle: {
     width: 200,

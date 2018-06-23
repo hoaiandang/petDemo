@@ -1,31 +1,49 @@
-import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  PanResponder,
-  Animated, } from 'react-native';
+import React, { Component } from "react";
+import { StyleSheet, View, Text } from "react-native";
+import Draggable from "./Draggable";
 
-export default class App extends React.Component {
-
-  
-  
+export default class Screen extends Component {
   render() {
     return (
-      <View style={styles.container}>
-        <Text>Open up App.js to start working on your app!</Text>
-        <Text>Changes you make will automatically reload.</Text>
-        <Text>Shake your phone to open the developer menu.</Text>
+      <View style={styles.mainContainer}>
+        <View style={styles.dropZone}>
+          <Text style={styles.text}>Drop them here!</Text>
+        </View>
+        <View style={styles.ballContainer} />
+        <View style={styles.row}>
+          <Draggable />
+          <Draggable />
+          <Draggable />
+          <Draggable />
+          <Draggable />
+        </View>
       </View>
     );
   }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  mainContainer: {
+    flex: 1
   },
+  ballContainer: {
+    height:200
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: 'space-evenly',
+  },  
+  dropZone: {
+    height: 200,
+    backgroundColor: "#00334d"
+  },
+  text: {
+    marginTop: 25,
+    marginLeft: 5,
+    marginRight: 5,
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 25,
+    fontWeight: "bold"
+  }
 });
