@@ -335,7 +335,7 @@ export default class App extends React.Component {
     {(seconds < 10) ? seconds = 0 + "" + seconds:null }
 
     //var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
-    var date = new Date().valueOf();
+    var date = Math.floor(new Date().valueOf() / 1000);
 
     this.setState({ todaysDate: date });
     this.state.pettt.updateTime(date);
@@ -369,7 +369,7 @@ export default class App extends React.Component {
     {(seconds < 10) ? seconds = 0 + "" + seconds:null }
 
     //var date = year + "" + month + "" + day + "" + hours + "" + minutes + "" + seconds;
-    var date = new Date().valueOf();
+    var date = Math.floor(new Date().valueOf() / 1000);
 
     this.setState({ todaysDate: date });
     this.state.pettt.updateTime(date);
