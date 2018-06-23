@@ -113,7 +113,7 @@ class Pet {
     }
     
     rLv = Math.floor(rLv / 1000);
-    console.log(rLv);
+    //console.log(rLv);
     if (rLv > 100) {
       return 100;
     } else if (rLv < 0) {
