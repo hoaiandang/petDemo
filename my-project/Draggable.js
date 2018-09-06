@@ -43,7 +43,7 @@ export default class Draggable extends React.Component {
       },
 
       onPanResponderRelease: (e, gesture) => {
-        if (this.isDropArea(gesture) && this.props.pet.canEat()) {
+        if (this.isDropArea(gesture) && this.props.pet.canEat() && !this.props.pet.sleeping) {
           Animated.timing(this.state.opacity, {
           toValue: 0,
           duration: 1000
@@ -82,7 +82,7 @@ export default class Draggable extends React.Component {
 
   render() {
     return (
-    	<View style={{ width: "20%", alignItems: "center" }}>
+    	<View style={{ width: 70, alignItems: "center" }}>
        		{this.renderDraggable()}
           <Text>{this.props.pet.fullness}</Text>
        	</View>

@@ -36,8 +36,40 @@ class Eye extends Component {
 
 }
 
+class PetStatus extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  renderBar(value, bool) {
+    var barLength = value * 20;
+    var color;
+    if (bool) {
+      color = 'green';
+    } else {
+      color = 'red';
+    }
+    return(
+      <View style={{height: 5, width: barLength, backgroundColor: 'green', marginTop: 10}}></View>
+      );
+  }
+
+  render() {
+    return (
+    <View style={{position: 'absolute', top: 50, left: 50}}>
+    <Text>{this.props.pet.name}</Text>
+      {this.renderBar(this.props.pet.fullness, this.props.pet.isFull())}
+      {this.renderBar(this.props.pet.playLv/4, this.props.pet.isEntertained())}
+      {this.renderBar(this.props.pet.restLv()/5760, this.props.pet.isRested())}
+      {this.renderBar(0)}
+      {this.renderBar(1)}
+    </View>
+      );
+  }
+}
+
 class Pet {
-	constructor(fullness, lastFed, lvl) {
+	constructor(fullness, lastFed, lvl, playLv, lastEntertained, name, wokeUpAt, startedSleepingAt, sleeping, restLvPivot) {
 		this.works = false;
 		this.fullness = fullness;
     this.lastFed = lastFed;
@@ -48,10 +80,14 @@ class Pet {
     
     this.lvl = lvl;
 
-    this.wokeUpAt = 0;
-    this.startedSleepingAt = 0;
-    this.sleeping = false;
-    this.restLvPivot = 0;
+    this.wokeUpAt = wokeUpAt;
+    this.startedSleepingAt = startedSleepingAt;
+    this.sleeping = sleeping;
+    this.restLvPivot = restLvPivot;
+
+    this.playLv = playLv;
+    this.lastEntertained = lastEntertained;
+    this.name = name;
 	}
 
 	petFeed() {
@@ -69,7 +105,7 @@ class Pet {
 	}
 
   decreaseHunger() {
-    if (this.fullness > 0) {
+    if (this.fullness > 0 && !this.sleeping) {
       this.fullness -= 1;
       this.lastFed = this.currentTime;
     }
@@ -85,40 +121,44 @@ class Pet {
 
   sleep() {
     this.restLvPivot = this.restLv();
-    console.log(this.restLvPivot);
     this.sleeping = !this.sleeping;
+
+    AsyncStorage.setItem("restLvPivot", JSON.stringify(this.restLvPivot));
+    AsyncStorage.setItem("sleeping", JSON.stringify(this.sleeping));
+
     if (this.sleeping) {
-      console.log('true');
       this.startedSleepingAt = this.currentTime;
+      AsyncStorage.setItem("startedSleepingAt", JSON.stringify(this.startedSleepingAt));
     } else {
       this.wokeUpAt = this.currentTime;
-      console.log('false');
+      AsyncStorage.setItem("wokeUpAt", JSON.stringify(this.wokeUpAt));
     }
   }
 
   isRested() {
-    return this.restLv() > 5;
+    return this.restLv() >= 21600;
   }
 
   restLv() {
     //rn this is wrong because its treating dates strings as integers (eg 6:00 - 5:30 = 30 vs 600 - 530 = 70)
     var rLv;
     if (!this.sleeping) {
-      //while awake, restlv = time sleeping - time awake
-      rLv = /*this.restLvPivot + */(this.wokeUpAt - this.startedSleepingAt) - (this.currentTime - this.wokeUpAt);
+      //while awake, restlv = the amount of energy the pet had when it woke up - the time spent awake
+      rLv = this.restLvPivot - (this.currentTime - this.wokeUpAt);
     } else {
       //while sleeping, the amount of energy the pet had when it went to sleep + the time spent sleeping
       rLv = this.restLvPivot + (this.currentTime - this.startedSleepingAt);
 
     }
     //console.log(rLv);
-    if (rLv > 100) {
-      return 100;
+    if (rLv > 28800) {
+      return 28800;
     } else if (rLv < 0) {
       return 0;
     } else {
       return rLv;
     }
+
   }
 
   color() {
@@ -132,8 +172,34 @@ class Pet {
     
   }
 
+  petPlay() {
+    if (this.playLv < 20) {
+      this.playLv += 1;
+    }
+    this.lastPlayed = this.currentTime;
+  }
+
+  isEntertained() {
+    return this.playLv >= 5;
+  }
+
+  decreaseEntertainment() {
+    if (this.playLv > 0) {
+      this.playLv -= 1;
+      this.lastEntertained = this.currentTime;
+    }
+  }
+
   levelUp() {
     this.lvl += 1;
+  }
+
+  resetLevel() {
+    this.lvl = 0;
+  }
+
+  renamePet(text) {
+    this.name = text;
   }
 }
 
@@ -154,7 +220,7 @@ export default class App extends React.Component {
       playingActive: false,
       washingActive: false,
       active: '',
-      pettt: new Pet(5),
+      pettt: new Pet(),
       //daysAlive (real mode)
       //birthDay
       //secondsAlive (dev mode)
@@ -181,6 +247,16 @@ export default class App extends React.Component {
     AsyncStorage.setItem("daysCaredFor", JSON.stringify(levelTo));
     this.setState({"daysCaredFor": levelTo});
     this.state.pettt.levelUp();
+    console.log(levelTo);
+    console.log(this.state.daysCaredFor);
+  }
+
+  resetLevelPet() {
+    var levelTo = 0;
+    AsyncStorage.setItem("daysCaredFor", JSON.stringify(levelTo));
+    this.setState({"daysCaredFor": levelTo});
+    this.setState({"nameScreenActive": true});
+    this.state.pettt.resetLevel();
     console.log(levelTo);
     console.log(this.state.daysCaredFor);
   }
@@ -227,7 +303,7 @@ export default class App extends React.Component {
   }
 
   entertainPet() {
-    {this.state.entertained || this.state.pettt.sleeping ? null:this.entertainPetHelper()}
+    {this.state.pettt.sleeping ? null:this.state.pettt.petPlay()}
 
     {(this.state.fed && this.state.rested && !this.state.entertained && this.state.washed) ? 
         this.levelPet():null}
@@ -266,6 +342,14 @@ export default class App extends React.Component {
     this.setState({
       line: this.state.line + 1
     })
+  }
+
+  exitNameScreen() {
+    this.setState({"nameScreenActive": false});
+  }
+
+  renamePet(text) {
+    this.state.pettt.renamePet(text);
   }
 
   componentDidMount() {
@@ -307,6 +391,29 @@ export default class App extends React.Component {
       this.setState({"fullness": JSON.parse(value)});
     }).done();
 
+    AsyncStorage.getItem("playLv").then((value) => {
+      this.setState({"playLv": JSON.parse(value)});
+    }).done();
+
+    AsyncStorage.getItem("wokeUpAt").then((value) => {
+      this.setState({"wokeUpAt": JSON.parse(value)});
+    })
+
+    AsyncStorage.getItem("startedSleepingAt").then((value) => {
+      this.setState({"startedSleepingAt": JSON.parse(value)});
+    })
+
+    AsyncStorage.getItem("sleeping").then((value) => {
+      this.setState({"sleeping": JSON.parse(value)});
+    })
+
+    AsyncStorage.getItem("restLvPivot").then((value) => {
+      this.setState({"restLvPivot": JSON.parse(value)});
+    })
+
+
+
+
     //this.setState({pettt: new Pet(this.state.fullness)});
     //you can't use this.state.fullness here, it will still be undefined
 
@@ -317,7 +424,9 @@ export default class App extends React.Component {
   }
 
   startSetTodaysDate() {
-  	this.setState({pettt: new Pet(this.state.fullness, this.state.lastFed, this.state.daysCaredFor)});
+  	this.setState({pettt: new Pet(this.state.fullness, this.state.lastFed, this.state.daysCaredFor, 
+      this.state.playLv, this.lastEntertained, 'squishy', this.state.wokeUpAt, this.state.startedSleepingAt, 
+      this.state.sleeping, this.state.restLvPivot)});
   	console.log(this.state.fullness);
   	var year = new Date().getFullYear();
     var month = new Date().getMonth() + 1;
@@ -373,16 +482,21 @@ export default class App extends React.Component {
     this.state.pettt.updateTime(date);
 
       {(this.state.todaysDate - this.state.pettt.lastFed) > 5 ? this.state.pettt.decreaseHunger():null};
+      {(this.state.todaysDate - this.state.pettt.lastEntertained) > 5 ? this.state.pettt.decreaseEntertainment():null};
       
       {(this.state.todaysDate - this.state.lastEntertained) > 5 ? this.setState({ entertained: false }):null}; 
       {(this.state.todaysDate - this.state.lastWashed) > 5 ? this.setState({ washed: false }):null};
       this.setState({fed: this.state.pettt.isFull()});  
-      this.setState({rested: this.state.pettt.isRested()});  
+      this.setState({rested: this.state.pettt.isRested()});
+      this.setState({entertained: this.state.pettt.isEntertained()});  
       AsyncStorage.setItem("fed", JSON.stringify(this.state.fed));
       AsyncStorage.setItem("rested", JSON.stringify(this.state.rested));
       AsyncStorage.setItem("entertained", JSON.stringify(this.state.entertained));
       AsyncStorage.setItem("washed", JSON.stringify(this.state.washed));
       AsyncStorage.setItem("fullness", JSON.stringify(this.state.pettt.fullness));
+      AsyncStorage.setItem("playLv", JSON.stringify(this.state.pettt.playLv));
+      AsyncStorage.setItem("lastFed", JSON.stringify(this.state.pettt.lastFed));
+
     
     
   }
@@ -443,7 +557,7 @@ export default class App extends React.Component {
       backgroundColor: this.state.pettt.color(),
     }
     var draggable1 = new Draggable();
-    var line1 = 'Name wants to learn more about the world.'
+    var line1 = this.state.pettt.name + ' wants to learn more about the world.'
     var line2 = "Tell them about 3 things you're grateful for!"
     var backgroundStyle;
     var shadowStyle;
@@ -495,7 +609,7 @@ export default class App extends React.Component {
         />
         <Text>{this.state.text}</Text>
       </View>}
-
+      <PetStatus pet={this.state.pettt}></PetStatus>
       <TouchableOpacity 
         activeOpacity={1} 
         style={[this.state.squished ? styles.circleSquished:styles.circle, lvl]} 
@@ -529,6 +643,7 @@ export default class App extends React.Component {
               <Text>Play</Text>
               {this.state.entertained ? <Text>True</Text>:<Text>False</Text>}
               <Text>{this.state.lastEntertained}</Text>
+              <Text>{this.state.pettt.playLv}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.petBarItem} onPress={() => this.wash()}>
               Wash
@@ -560,6 +675,40 @@ export default class App extends React.Component {
           <Text>{JSON.stringify(this.state.pettt.sleeping)}</Text>
         </TouchableOpacity>
         <View style={styles.gratitudeButtonShadow}></View>
+        <TouchableOpacity 
+        style={styles.resetLevelButton} 
+        onPress={() => this.resetLevelPet()}>
+          id:resetLevel
+          <Text>Reset Level</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+        style={styles.levelUpButton} 
+        onPress={() => this.levelPet()}>
+          id:levelUp
+          <Text>Level Up</Text>
+          <Text>{this.state.pettt.lvl}</Text>
+        </TouchableOpacity>
+
+        {this.state.nameScreenActive && 
+          <View style={styles.nameScreen}>
+            id:nameScreen
+            <TextInput
+              style={{backgroundColor: 'white', padding: 20,  
+              borderRadius: 16, width: '60%',  zIndex: 1}}
+              placeholder="Name your pet"
+              onChangeText={(text) => this.state.pettt.renamePet(text)}
+            />
+            <View style={styles.nameScreenBackground}>
+              id:nameScreenBackground
+            </View>
+            <TouchableOpacity 
+              style={styles.exitNameScreenButton} 
+              onPress={() => this.exitNameScreen()}>
+              id:exitNameScreen
+              <Text style={{color: 'white', fontSize: 32, textAlign: 'center'}}>X</Text>
+            </TouchableOpacity>
+          </View>
+        }
       </TouchableOpacity>
       
     );
@@ -577,7 +726,7 @@ var styles = StyleSheet.create({
     justifyContent: 'center',
 
   }, menu: {
-    flex: 1,
+    //flex: 1,
     backgroundColor: '#1D3557',
     //backgroundColor: '#E63946',
     alignItems: 'center',
@@ -715,6 +864,63 @@ var styles = StyleSheet.create({
     bottom: '35%',
     zIndex: -1,
     transform: [{scaleX: 3.5}],
-   }
+
+   }, resetLevelButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 40/2,
+    backgroundColor: '#E63946',
+    position: 'absolute',
+    bottom: '8%',
+    left: '15%',
+
+   }, levelUpButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 40/2,
+    backgroundColor: '#E63946',
+    position: 'absolute',
+    bottom: '8%',
+    left: '30%',
+
+   }, name: {
+    bottom: '30%',
+    position: 'absolute',
+    fontSize: 36,
+    color: 'white',
+
+   }, nameScreen: {
+    height: '100%',
+    width: '100%',
+    //backgroundColor: 'black',
+    zIndex: 2,
+    //opacity: 0.5,
+    
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    //backgroundColor: 'blue',
+
+   }, nameScreenBackground: {
+    height: '100%',
+    width: '100%',
+    backgroundColor: 'black',
+    //zIndex: 4,
+    opacity: 0.5,
+    position: 'absolute',
+    //left: 0,
+    //top: 0,
+
+   }, exitNameScreenButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 40/2,
+    //backgroundColor: '#E63946',
+    position: 'absolute',
+    top: '10%',
+    right: '10%',
+    zIndex: 1,
+
+   },
 
 });
